@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Caso de uso: Importación del feed de productos a PostgreSQL.
 
@@ -15,11 +17,13 @@ Orquesta la lectura, validación y persistencia del catálogo exportado por Rovi
 from dataclasses import dataclass
 import logging
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, TYPE_CHECKING, Union
 
 from src.domain.exceptions import TruncatedFeedError
 from src.infrastructure.csv.feed_parser import FeedParser
-from src.infrastructure.database.repositories import ProductRepository
+
+if TYPE_CHECKING:
+    from src.infrastructure.database.repositories import ProductRepository
 
 logger = logging.getLogger(__name__)
 
