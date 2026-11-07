@@ -1,18 +1,35 @@
 """
 Modelos ORM de SQLAlchemy 2.0 (Capa de Infraestructura).
 
-Implementa el patrón Data Mapper: estas clases representan las tablas en PostgreSQL,
-manteniéndose desacopladas de las entidades puras de Dominio (Product, Listing).
+Implementa el patrón Data Mapper con compatibilidad multi-dialecto:
+- En PostgreSQL: Almacena store_ids como array nativo `INTEGER[]`.
+- En SQLite (desarrollo local sin Docker): Almacena store_ids como `JSON` estructurado.
 """
 
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from sqlalchemy import ARRAY, Boolean, DateTime, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, Integer, JSON, Numeric, String, Text, TypeDecorator, func
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from src.domain.models import Listing, Product
+
+
+class StoreIdsType(TypeDecorator):
+    """
+    Tipo de columna portable:
+    - En PostgreSQL utiliza el tipo nativo ARRAY(Integer).
+    - En SQLite o entornos locales sin PostgreSQL almacena la lista como JSON.
+    """
+    impl = JSON
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect: Any) -> Any:
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_ARRAY(Integer()))
+        return dialect.type_descriptor(JSON())
 
 
 class Base(DeclarativeBase):
@@ -29,7 +46,7 @@ class ProductORM(Base):
     product_id: Mapped[str] = mapped_column(String, primary_key=True)
     title: Mapped[str] = mapped_column(String(80), nullable=False)
     price: Mapped[Decimal] = mapped_column(Numeric(7, 2), nullable=False)
-    store_ids: Mapped[List[int]] = mapped_column(ARRAY(Integer), nullable=False)
+    store_ids: Mapped[List[int]] = mapped_column(StoreIdsType, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True, nullable=False)
     last_feed_file: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     imported_at: Mapped[datetime] = mapped_column(

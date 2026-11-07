@@ -1,10 +1,9 @@
 """
 Gestión de conexiones y sesiones de base de datos con SQLAlchemy 2.0.
 
-Proporciona un SessionFactory con context manager (`get_session()`) que garantiza:
-- Commit automático si el bloque de código se completa sin excepciones.
-- Rollback automático ante cualquier error.
-- Cierre y devolución adecuada de conexiones al pool.
+Soporta de forma transparente:
+- PostgreSQL (producción / docker-compose).
+- SQLite (desarrollo local sin Docker para pruebas inmedias).
 """
 
 from contextlib import contextmanager
@@ -24,18 +23,22 @@ class DatabaseConnectionFactory:
     """
 
     def __init__(self, database_url: str):
-        # Aseguramos compatibilidad con el driver de psycopg2 en SQLAlchemy
         url = database_url
-        if url.startswith("postgresql://") and not url.startswith("postgresql+psycopg2://"):
-            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+        engine_kwargs = {}
+        if url.startswith("sqlite"):
+            # Para SQLite permitimos uso multihilo seguro
+            engine_kwargs["connect_args"] = {"check_same_thread": False}
+        else:
+            # Compatibilidad con psycopg2 en PostgreSQL
+            if url.startswith("postgresql://") and not url.startswith("postgresql+psycopg2://"):
+                url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            engine_kwargs["pool_pre_ping"] = True
+            engine_kwargs["pool_size"] = 5
+            engine_kwargs["max_overflow"] = 10
 
         self._database_url = url
-        self._engine: Engine = create_engine(
-            self._database_url,
-            pool_pre_ping=True,  # Verifica conexiones activas antes de usarlas
-            pool_size=5,
-            max_overflow=10,
-        )
+        self._engine: Engine = create_engine(self._database_url, **engine_kwargs)
         self._session_factory = sessionmaker(
             bind=self._engine,
             autocommit=False,

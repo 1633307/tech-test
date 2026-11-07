@@ -72,7 +72,7 @@ def load_settings() -> Settings:
     return Settings(
         database_url=os.environ.get(
             "DATABASE_URL",
-            "postgresql://rovira:rovira@localhost:5432/rovira",
+            "sqlite:///rovira.db",
         ),
         portal_base_url=os.environ.get(
             "PORTAL_BASE_URL",
