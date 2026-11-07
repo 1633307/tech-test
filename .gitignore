@@ -1,0 +1,36 @@
+# Dependencias Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Variables de entorno
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Postgres data (docker volume)
+pgdata/
+
+# Logs
+*.log
+
+# Documentos de trabajo internos
+PLAN.md

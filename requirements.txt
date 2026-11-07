@@ -1,0 +1,9 @@
+# --- Producción ---
+psycopg2-binary==2.9.10
+requests==2.32.3
+
+# --- CLI ---
+# (usamos argparse de la stdlib, no necesita instalación)
+
+# --- Testing ---
+pytest==8.3.4

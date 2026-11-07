@@ -1,0 +1,41 @@
+services:
+  # -------------------------------------------------------------------
+  # Simulador de Piezalia (proporcionado por Portal Hero, no modificar)
+  # -------------------------------------------------------------------
+  portal:
+    build: ./portal-sim
+    ports:
+      - "8080:8080"
+
+  # -------------------------------------------------------------------
+  # Base de datos PostgreSQL para el catálogo local
+  # -------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: rovira
+      POSTGRES_USER: rovira
+      POSTGRES_PASSWORD: rovira
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # -------------------------------------------------------------------
+  # Nuestra aplicación de sincronización
+  # -------------------------------------------------------------------
+  app:
+    build: .
+    depends_on:
+      - db
+      - portal
+    environment:
+      DATABASE_URL: postgresql://rovira:rovira@db:5432/rovira
+      PORTAL_BASE_URL: http://portal:8080
+      ACCOUNTS_CSV: /app/accounts.csv
+    volumes:
+      - ./data:/app/data
+      - ./accounts.csv:/app/accounts.csv
+
+volumes:
+  pgdata:
