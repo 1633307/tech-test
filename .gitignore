@@ -32,5 +32,9 @@ pgdata/
 # Logs
 *.log
 
+# SQLite databases
+*.db
+*.sqlite3
+
 # Documentos de trabajo internos
 PLAN.md

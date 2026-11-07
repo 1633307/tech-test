@@ -2,9 +2,9 @@
 Repositorios de acceso a datos implementados con SQLAlchemy 2.0 ORM.
 
 Mantiene el principio de inversión de dependencias de Clean Architecture:
-- La capa de Dominio define las entidades (Product, Listing) y las interfaces lógicas.
-- Esta capa de Infraestructura utiliza SQLAlchemy 2.0 para persistir y consultar,
-  convirtiendo bidireccionalmente entre modelos ORM y entidades de Dominio.
+- La capa de Dominio define las entidades (Product, Listing).
+- Esta capa de Infraestructura soporta tanto PostgreSQL (vía pg_insert ON CONFLICT)
+  como SQLite (vía sqlite_insert ON CONFLICT) para permitir ejecución inmediata sin Docker.
 """
 
 from decimal import Decimal
@@ -12,7 +12,6 @@ import logging
 from typing import Dict, List, Optional
 
 from sqlalchemy import delete, func, select, update
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from src.domain.models import Listing, Product
 from src.infrastructure.database.connection import DatabaseConnectionFactory
@@ -65,7 +64,7 @@ class ProductRepository:
 
     def save_feed_catalog(self, products: List[Product], feed_file: str) -> Dict[str, int]:
         """
-        Persiste el feed completo usando upsert nativo de PostgreSQL mediante SQLAlchemy:
+        Persiste el feed completo usando upsert nativo (PostgreSQL o SQLite):
         1. Desactiva piezas que ya no vienen en el feed (regla de Rovira).
         2. Inserta o actualiza las piezas presentes en el feed y las marca activas.
         """
@@ -85,7 +84,8 @@ class ProductRepository:
             res = session.execute(deactivate_stmt)
             deactivated_count = res.rowcount
 
-            # 2. Upsert en bloque mediante PostgreSQL ON CONFLICT DO UPDATE
+            # 2. Upsert multi-dialecto (PostgreSQL vs SQLite)
+            dialect_name = session.bind.dialect.name
             values = [
                 {
                     "product_id": p.product_id,
@@ -98,19 +98,37 @@ class ProductRepository:
                 for p in products
             ]
 
-            insert_stmt = pg_insert(ProductORM).values(values)
-            upsert_stmt = insert_stmt.on_conflict_do_update(
-                index_elements=[ProductORM.product_id],
-                set_={
-                    "title": insert_stmt.excluded.title,
-                    "price": insert_stmt.excluded.price,
-                    "store_ids": insert_stmt.excluded.store_ids,
-                    "is_active": True,
-                    "last_feed_file": insert_stmt.excluded.last_feed_file,
-                    "updated_at": func.now(),
-                },
-            )
-            session.execute(upsert_stmt)
+            if dialect_name == "postgresql":
+                from sqlalchemy.dialects.postgresql import insert as pg_insert
+                stmt = pg_insert(ProductORM).values(values)
+                upsert_stmt = stmt.on_conflict_do_update(
+                    index_elements=[ProductORM.product_id],
+                    set_={
+                        "title": stmt.excluded.title,
+                        "price": stmt.excluded.price,
+                        "store_ids": stmt.excluded.store_ids,
+                        "is_active": True,
+                        "last_feed_file": stmt.excluded.last_feed_file,
+                        "updated_at": func.now(),
+                    },
+                )
+                session.execute(upsert_stmt)
+            else:
+                # SQLite o fallback genérico
+                from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+                stmt = sqlite_insert(ProductORM).values(values)
+                upsert_stmt = stmt.on_conflict_do_update(
+                    index_elements=[ProductORM.product_id],
+                    set_={
+                        "title": stmt.excluded.title,
+                        "price": stmt.excluded.price,
+                        "store_ids": stmt.excluded.store_ids,
+                        "is_active": True,
+                        "last_feed_file": stmt.excluded.last_feed_file,
+                        "updated_at": func.now(),
+                    },
+                )
+                session.execute(upsert_stmt)
 
         return {"active": len(products), "deactivated": deactivated_count}
 
@@ -140,23 +158,41 @@ class ListingRepository:
     def upsert_listing(self, listing: Listing) -> None:
         """Inserta o actualiza un anuncio individual en la base de datos."""
         with self._db_factory.get_session() as session:
-            insert_stmt = pg_insert(ListingORM).values(
-                listing_id=listing.listing_id,
-                account_id=listing.account_id,
-                sku=listing.sku,
-                title=listing.title,
-                price=listing.price,
-            )
-            upsert_stmt = insert_stmt.on_conflict_do_update(
-                index_elements=[ListingORM.listing_id],
-                set_={
-                    "sku": insert_stmt.excluded.sku,
-                    "title": insert_stmt.excluded.title,
-                    "price": insert_stmt.excluded.price,
-                    "synced_at": func.now(),
-                },
-            )
-            session.execute(upsert_stmt)
+            dialect_name = session.bind.dialect.name
+            values = {
+                "listing_id": listing.listing_id,
+                "account_id": listing.account_id,
+                "sku": listing.sku,
+                "title": listing.title,
+                "price": listing.price,
+            }
+
+            if dialect_name == "postgresql":
+                from sqlalchemy.dialects.postgresql import insert as pg_insert
+                stmt = pg_insert(ListingORM).values(**values)
+                upsert_stmt = stmt.on_conflict_do_update(
+                    index_elements=[ListingORM.listing_id],
+                    set_={
+                        "sku": stmt.excluded.sku,
+                        "title": stmt.excluded.title,
+                        "price": stmt.excluded.price,
+                        "synced_at": func.now(),
+                    },
+                )
+                session.execute(upsert_stmt)
+            else:
+                from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+                stmt = sqlite_insert(ListingORM).values(**values)
+                upsert_stmt = stmt.on_conflict_do_update(
+                    index_elements=[ListingORM.listing_id],
+                    set_={
+                        "sku": stmt.excluded.sku,
+                        "title": stmt.excluded.title,
+                        "price": stmt.excluded.price,
+                        "synced_at": func.now(),
+                    },
+                )
+                session.execute(upsert_stmt)
 
     def delete_listing(self, listing_id: str) -> None:
         """Elimina un anuncio del espejo local."""
