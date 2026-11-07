@@ -11,6 +11,9 @@ Implementado bajo los principios de **Clean Architecture**, con **SQLAlchemy 2.0
 El código está estructurado en capas estrictamente desacopladas:
 
 ```
+docs/                      # Enunciado, decisiones, plan y contexto
+├── assets/                # Imágenes de documentación
+data/                      # Feeds CSV de ejemplo
 src/
 ├── domain/                  # Entidades puras (Product, Listing, SyncAction) y excepciones
 ├── application/             # Casos de uso (ImportFeed, SyncCatalog, ProductStatus)
@@ -22,6 +25,11 @@ src/
 ├── config.py                # Configuración y carga de accounts.csv
 └── cli.py                   # CLI principal para ejecución en cron
 ```
+
+`README.md`, `Dockerfile`, `docker-compose.yml` y `requirements.txt` se mantienen en
+la raíz para que las herramientas y los comandos habituales sigan encontrándolos.
+La documentación adicional está en `docs/`; los feeds CSV de ejemplo están en
+`data/` y `accounts.csv` permanece en la raíz.
 
 ---
 
@@ -102,7 +110,7 @@ Deja cada cuenta de Piezalia exactamente como dice el catálogo activo.
 ### 3. `status <product_id>`
 Herramienta de diagnóstico para soporte (Marta). Muestra un informe estructurado con el estado de la pieza en catálogo y en cada una de las 4 cuentas de Piezalia, indicando motivos exactos (ej. *«Token de la cuenta 4 caducado: Jordi debe renovar en el portal»* o *«Jordi no seleccionó la cuenta 4 en el feed»*).
 
-![Ejemplo de soporte para Marta](./Captura_Exemplo_Soporte_Marta.png)
+![Ejemplo de soporte para Marta](./docs/assets/Captura_Exemplo_Soporte_Marta.png)
 
 ---
 

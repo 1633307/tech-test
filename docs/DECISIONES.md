@@ -56,4 +56,4 @@ Para que Marta pueda contestar a Jordi al instante sin mirar logs, el comando `p
 2. Le dice el estado en cada una de las 4 cuentas.
 3. Si la pieza no está en la cuenta 4, Marta ve directamente en pantalla la causa: *"El token de la cuenta 4 ha caducado en Piezalia. Jordi debe renovar el token desde el portal."* o *"Jordi no seleccionó la cuenta 4 en el último feed"*.
 
-![Ejemplo de ejecución del comando status](./Captura_Exemplo_Soporte_Marta.png)
+![Ejemplo de ejecución del comando status](./assets/Captura_Exemplo_Soporte_Marta.png)

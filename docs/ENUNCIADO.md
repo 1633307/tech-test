@@ -43,5 +43,5 @@ Cómo lo organizas, qué tecnologías usas, qué guardas y cómo lo compruebas l
 
 - Un repositorio git (enlace a GitHub, o un zip con la carpeta `.git`).
 - `README.md`: lo que haga falta para arrancarlo.
-- `DECISIONES.md`, de una página como mucho: qué has decidido y por qué, sobre todo en lo que este enunciado no dice. Si algo no te cuadra, decide tú y explícalo ahí.
+- `docs/DECISIONES.md`, de una página como mucho: qué has decidido y por qué, sobre todo en lo que este enunciado no dice. Si algo no te cuadra, decide tú y explícalo ahí.
 - Si has usado IA, la conversación exportada.

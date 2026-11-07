@@ -14,7 +14,7 @@ Primero te compartiré el enunciado/README del proyecto. Tu primera tarea será 
 - Estrategia de ramas:
   * `main`: Contendrá únicamente la configuración inicial, el esqueleto del proyecto y la estructura de capas.
   * Ramas por caso de uso: Crearemos una rama independiente para cada caso de uso o feature, la cual se fusionará a `main` mediante merge tras ser validada. Propón ramas adicionales si lo ves necesario.
-- Documentación viva: Crearemos un archivo `PLAN.md` en la raíz del proyecto para registrar el plan de ejecución, el checklist de tareas y mantener el contexto actualizado a lo largo del desarrollo.
+- Documentación viva: Crearemos un archivo `docs/PLAN.md` para registrar el plan de ejecución, el checklist de tareas y mantener el contexto actualizado a lo largo del desarrollo.
 
 4. ESTÁNDARES DE CÓDIGO
 - Añade comentarios estratégicos en el código que expliquen el *porqué* de las decisiones de diseño y las fronteras entre capas de Clean Architecture. Evita comentarios triviales o evidentes.
