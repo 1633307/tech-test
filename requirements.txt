@@ -1,9 +1,11 @@
-# --- Producción ---
+# --- Producción & ORM ---
 psycopg2-binary==2.9.10
+sqlalchemy>=2.0.0
 requests==2.32.3
 
-# --- CLI ---
-# (usamos argparse de la stdlib, no necesita instalación)
+# --- API Opcional para Marta (FastAPI) ---
+fastapi>=0.115.0
+uvicorn>=0.30.0
 
 # --- Testing ---
 pytest==8.3.4

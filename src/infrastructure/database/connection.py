@@ -1,58 +1,66 @@
 """
-Gestión de conexiones a la base de datos PostgreSQL.
+Gestión de conexiones y sesiones de base de datos con SQLAlchemy 2.0.
 
-Proporciona utilidades para obtener conexiones y cursores dentro de un
-bloque de contexto (contextmanager), asegurando el commit automático en
-éxito o el rollback ante cualquier fallo, además de devolver la conexión
-al pool o cerrarla correctamente.
+Proporciona un SessionFactory con context manager (`get_session()`) que garantiza:
+- Commit automático si el bloque de código se completa sin excepciones.
+- Rollback automático ante cualquier error.
+- Cierre y devolución adecuada de conexiones al pool.
 """
 
 from contextlib import contextmanager
 import logging
 from typing import Generator
-import psycopg2
-from psycopg2.extensions import connection as PgConnection
-from psycopg2.extras import RealDictCursor
+
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
 
 logger = logging.getLogger(__name__)
 
 
 class DatabaseConnectionFactory:
     """
-    Fábrica encargada de instanciar y gestionar conexiones directas con PostgreSQL.
+    Fábrica de sesiones y motor de base de datos para SQLAlchemy 2.0.
     """
 
     def __init__(self, database_url: str):
-        self._database_url = database_url
+        # Aseguramos compatibilidad con el driver de psycopg2 en SQLAlchemy
+        url = database_url
+        if url.startswith("postgresql://") and not url.startswith("postgresql+psycopg2://"):
+            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
-    def get_raw_connection(self) -> PgConnection:
-        """Crea y devuelve una conexión nueva a PostgreSQL."""
-        return psycopg2.connect(self._database_url)
+        self._database_url = url
+        self._engine: Engine = create_engine(
+            self._database_url,
+            pool_pre_ping=True,  # Verifica conexiones activas antes de usarlas
+            pool_size=5,
+            max_overflow=10,
+        )
+        self._session_factory = sessionmaker(
+            bind=self._engine,
+            autocommit=False,
+            autoflush=False,
+            expire_on_commit=False,
+        )
+
+    @property
+    def engine(self) -> Engine:
+        """Acceso al motor SQLAlchemy subyacente (por ejemplo para migraciones DDL)."""
+        return self._engine
 
     @contextmanager
-    def get_connection(self) -> Generator[PgConnection, None, None]:
+    def get_session(self) -> Generator[Session, None, None]:
         """
-        Context manager para una conexión gestionada.
-        Realiza commit si todo va bien, rollback si ocurre una excepción,
-        y asegura el cierre de la conexión al finalizar.
+        Context manager que entrega una sesión ORM gestionada:
+        hace commit automático al salir sin errores y rollback en caso de fallo.
         """
-        conn = self.get_raw_connection()
+        session: Session = self._session_factory()
         try:
-            yield conn
-            conn.commit()
+            yield session
+            session.commit()
         except Exception as e:
-            conn.rollback()
-            logger.error("Transacción abortada con rollback por error: %s", e)
+            session.rollback()
+            logger.error("Error en sesión de base de datos, transacción abortada con rollback: %s", e)
             raise
         finally:
-            conn.close()
-
-    @contextmanager
-    def get_cursor(self, cursor_factory=RealDictCursor):
-        """
-        Context manager que proporciona directamente un cursor (por defecto RealDictCursor)
-        dentro de una transacción segura.
-        """
-        with self.get_connection() as conn:
-            with conn.cursor(cursor_factory=cursor_factory) as cursor:
-                yield cursor
+            session.close()
